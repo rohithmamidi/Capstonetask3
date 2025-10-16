@@ -6,23 +6,39 @@ resource "random_id" "suffix" {
   byte_length = 4
 }
 
-# S3 bucket without ACL
+# S3 bucket
 resource "aws_s3_bucket" "app_bucket" {
   bucket        = "capstone-task3-app-${random_id.suffix.hex}"
-  force_destroy = true   # allows deletion even if non-empty
+  force_destroy = true
 }
 
-# Upload index.html and make it public
+# S3 object (no ACL)
 resource "aws_s3_object" "app_file" {
   bucket = aws_s3_bucket.app_bucket.id
   key    = "index.html"
   source = "index.html"
-  acl    = "public-read"  # only on the object
 }
 
-# Security group to allow HTTP
+# S3 bucket policy for public access
+resource "aws_s3_bucket_policy" "public_read" {
+  bucket = aws_s3_bucket.app_bucket.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Principal = "*"
+        Action = ["s3:GetObject"]
+        Resource = ["${aws_s3_bucket.app_bucket.arn}/*"]
+      }
+    ]
+  })
+}
+
+# Security group with unique name
 resource "aws_security_group" "allow_http" {
-  name        = "allow_http"
+  name        = "allow_http_${random_id.suffix.hex}"
   description = "Allow HTTP traffic"
 
   ingress {
@@ -42,7 +58,7 @@ resource "aws_security_group" "allow_http" {
 
 # EC2 instance
 resource "aws_instance" "app_server" {
-  ami           = "ami-0c02fb55956c7d316" # Amazon Linux 2
+  ami           = "ami-0c02fb55956c7d316"
   instance_type = "t2.micro"
   security_groups = [aws_security_group.allow_http.name]
 
