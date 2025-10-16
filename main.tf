@@ -32,6 +32,15 @@ resource "aws_security_group" "allow_http" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
+    # Allow SSH
+  ingress {
+    description = "SSH from anywhere"
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]  # safer: replace with your IP only
+  }
+
   egress {
     from_port   = 0
     to_port     = 0
